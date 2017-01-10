@@ -1,0 +1,97 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+`lazy-object2array`
+
+
+@demo demo/index.html 
+-->
+
+<dom-module id="lazy-object2array">
+	<template>
+		<template is="dom-if" if="[[dev]]">
+			<button on-click="test">test</button>
+			[[object.a]]
+			<template is="dom-repeat" items="{{array}}">
+				[[item.key]] 
+				<input value="{{item.value::input}}" />
+			</template>
+		</template>
+	</template>
+  	<script>
+	    Polymer({
+	      	is: 'lazy-object2array',
+	      	test:function(){
+		      	this.set("object",{
+			      	a:1,
+			      	b:2
+		      	});
+	      	},
+	      	properties: {
+		      	dev:{
+			      	type:Boolean,
+			      	value:false
+		      	},
+		        array:{
+			        type:Array,
+			        notify:true,
+                    value:[]
+		        },
+		        object:{
+			        type:Object,
+			        notify:true
+		        }
+	      	},
+	      	observers:[
+		      	"_objectChanged(object.*)",
+		      	"_arrayChanged(array.*)"
+	      	],
+	      	_arrayChanged:function(change){
+		      	let path = change.path.match(/^array\.(#\d+)\.([^\.]+)(\.|$)/);
+	            if(!path) return;
+	            let id = path[1], field = path[2];
+	            if(field == "key") throw new Error("my-objarray: Must not change key!");
+	            if(field != "value") throw new Error("my-objarray: Only change inside value!");
+	            this._setting = true;
+	            this.set(this._getPath(change, id), change.value);
+	            delete this._setting;
+	      	},
+	      	_objectChanged:function(change){
+		      	if(this._setting) return;
+	            if(change.path == "object") {
+		            this._rewriteArray();
+	            }else{
+		            this._writeElement(change);
+	            }
+	      	},
+	      	_rewriteArray:function() {
+	            this.splice("array", 0, this.array.length);
+	            for(let i in this.object) {
+	                this.push("array", {key:i, value:this.object[i]});
+	            }
+	        },
+	        _writeElement:function(change) {
+	            const path = change.path.match(/^object\.([^\.]+)(.*)$/);
+	            const key = path[1];
+	            const objectPath = "object." + key + (path[2] || "");
+	            const id = this._getId(key);
+	            const arrayPath = "array." + id + ".value" + (path[2] || "");
+	            this.set(arrayPath, this.get(objectPath));
+	        },
+	        _getId:function(key) {
+	            const collection = Polymer.Collection.get(this.array);
+	            for(const element of this.array) {
+	                if((element && element.key) === key) {
+	                    return collection.getKey(element);
+	                }
+	            }
+	        },
+	        _getPath:function(change, id) {
+	            let collection = Polymer.Collection.get(change.base);
+	            let index = change.base.indexOf(collection.getItem(id));
+	            let key = change.base[index].key;
+	            return change.path.replace("array." + id + ".value", "object." + key);
+	        }
+	    });
+  	</script>
+</dom-module>
