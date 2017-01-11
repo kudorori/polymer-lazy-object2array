@@ -11,30 +11,51 @@
 	<template>
 		<template is="dom-if" if="[[dev]]">
 			<button on-click="test">test</button>
-			[[object.a]]
+			<button on-click="__testadd">add</button>
+			<button on-click="__testchange">change</button>
+			<button on-click="__testremove">remove</button>
+			<button on-click="print">print</button>
 			<template is="dom-repeat" items="{{array}}">
-				[[item.key]] 
-				<input value="{{item.value::input}}" />
+				<div>
+					<input value="{{item.key::input}}" />
+					<input value="{{item.value::input}}" />
+				</div>
 			</template>
 			
-			<button on-click="__testadd">add</button>
-			<button on-click="__testchange">changge</button>
+			
 		</template>
 	</template>
   	<script>
+	  	var hasSplice=new RegExp(/\.splice$/);
+	  	var hasValue = new RegExp(/\.value$/);
+	  	var hasKey = new RegExp(/\.key$/);
 	    Polymer({
 	      	is: 'lazy-object2array',
+	      	print:function(){
+		      	console.log(this.object,this.array);
+	      	},
 	      	test:function(){
-		      	this.set("object",{
-			      	a:1,
-			      	b:2
-		      	});
+		  		var a = ["a","b","c","d","e","f","g"];
+		  		var result = {};
+		  		a.forEach(function(i1){
+			  		a.forEach(function(i2){
+				  		result[i1+i2]=0;
+			  		})
+		  		});
+		  		this.set("object",result);
 	      	},
 	      	__testchange:function(){
-		      	this.set("object.a",123123123);
+		      	this.set("object.c",123123123);
 	      	},
 	      	__testadd:function(){
-		      	this.set("object.c","abcdd");
+		      	this.push("array",{
+			      	key:"c",
+			      	value:"123"
+		      	});
+		      	console.log(this.array,this.object);
+	      	},
+	      	__testremove:function(){
+		      	this.splice("array",0,1);
 	      	},
 	      	properties: {
 		      	dev:{
@@ -56,66 +77,75 @@
 		      	"_arrayChanged(array.*)"
 	      	],
 	      	_arrayChanged:function(change){
-		      	let path = change.path.match(/^array\.(#\d+)\.([^\.]+)(\.|$)/);
-	            if(!path) return;
-	            let id = path[1], field = path[2];
-	            if(field == "key") {
-// 		            throw new Error("my-objarray: Must not change key!")
-					return ;
-	            };
-	            if(field != "value"){
-// 		            throw new Error("my-objarray: Only change inside value!")
-					return ;
-	            };
-	            this._setting = true;
-	            this.set(this._getPath(change, id), change.value);
-	            delete this._setting;
+		      	console.log(change);
+		      	if(this._setting){
+			      	return;
+		      	}
+		      	this._setting=true;
+		      	var that = this;
+		      	this._rewriteObject(change.base).then(function(result){
+			      	delete that._setting;
+			      	that.set("object",result);
+		      	}.bind(this));
+	      	},
+	      	_rewriteObject:function(items){
+		      	return new Promise(function(resolve,reject){
+			      	var result = {};
+			      	items.forEach(function(item){
+				      	result[item.key]=item.value;
+			      	});
+			      	resolve(result);
+		      	})
 	      	},
 	      	_objectChanged:function(change){
-		      	if(this._setting) return;
-	            if(change.path == "object") {
-		            this._rewriteArray();
-	            }else{
-		            this._writeElement(change).catch(function(){
-			            this._rewriteArray();
-		            }.bind(this));
-	            }
+		      	console.log(change,this._setting);
+		      	if(this._setting){
+			      	return;
+		      	}
+		      	this._setting=true;
+		      	var that = this;
+		      	if(change.path=="object"){
+			      	this._rewriteArray(change.base).then(function(result){
+				    	that.set("array",result);
+				    	delete that._setting;
+			      	});
+		      	}else{ 
+			      	this._rewriteElement(change.path).then(function(arrayKey){
+				      	that.set("array.#"+arrayKey,change.value);
+			      	}).catch(function(objectKey){
+				      	console.log(objectKey,change.value);
+				      	that.push("array",{
+					      	key:objectKey,
+					      	value:change.value
+				      	});
+			      	}).then(function(){
+				      	delete that._setting;
+			      	})
+		      	}
 	      	},
-	      	_rewriteArray:function() {
-	            this.splice("array", 0, this.array.length);
-	            for(let i in this.object) {
-	                this.push("array", {key:i, value:this.object[i]});
-	            }
-	        },
-	        _writeElement:function(change) {
-		        return new Promise(function(resolve,reject){
-			        const path = change.path.match(/^object\.([^\.]+)(.*)$/);
-		            const key = path[1];
-		            const objectPath = "object." + key + (path[2] || "");
-		            const id = this._getId(key);
-		            if(id!=undefined){
-			        	const arrayPath = "array." + id + ".value" + (path[2] || "");
-			            this.set(arrayPath, this.get(objectPath));   
-		            }else{
-			            reject();
-		            }
-		        })
-	            
-	        },
-	        _getId:function(key) {
-	            const collection = Polymer.Collection.get(this.array);
-	            for(const element of this.array) {
-	                if((element && element.key) === key) {
-	                    return collection.getKey(element);
-	                }
-	            }
-	        },
-	        _getPath:function(change, id) {
-	            let collection = Polymer.Collection.get(change.base);
-	            let index = change.base.indexOf(collection.getItem(id));
-	            let key = change.base[index].key;
-	            return change.path.replace("array." + id + ".value", "object." + key);
-	        }
+	      	_rewriteArray:function(obj){
+		      	return new Promise(function(resolve,reject){
+			      	var result = Object.keys(obj).map(function(key){
+				      	return {key:key,value:obj[key]}
+			      	});
+			      	resolve(result);
+		      	});
+	      	},
+	      	_rewriteElement:function(change){
+		      	return new Promise(function(resolve,reject){
+			      	console.log("rewriteElement");
+			      	var path = change.split(".");
+			      	var key = path[1];
+			      	var check = this.array.filter(function(item){
+				      	return item.key==key;
+			      	});
+			      	if(check.length>0){
+				      	resolve(check[0].key);
+			      	}else{
+				      	reject(key);
+			      	}
+		      	}.bind(this))
+	      	}
 	    });
   	</script>
 </dom-module>
