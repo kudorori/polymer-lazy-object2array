@@ -83,10 +83,28 @@
 		      	}
 		      	this._setting=true;
 		      	var that = this;
-		      	this._rewriteObject(change.base).then(function(result){
-			      	delete that._setting;
-			      	that.set("object",result);
-		      	}.bind(this));
+		      	if(change.path=="array"){
+			      	this._rewriteObject(change.base).then(function(result){
+				      	delete that._setting;
+				      	that.set("object",result);
+			      	}.bind(this));
+		      	}else if(hasSplice.test(change.path)){
+			      	this._rewriteObject(change.base).then(function(result){
+				      	delete that._setting;
+				      	that.set("object",result);
+			      	}.bind(this));
+		      	}else if(hasValue.test(change.path)){
+			      	this._rewriteObject(change.base).then(function(result){
+				      	delete that._setting;
+				      	that.set("object",result);
+			      	}.bind(this));
+		      	}else if(hasKey.test(change.path)){
+			      	console.log("key");
+			      	this._rewriteObject(change.base).then(function(result){
+				      	delete that._setting;
+				      	that.set("object",result);
+			      	}.bind(this));
+		      	}
 	      	},
 	      	_rewriteObject:function(items){
 		      	return new Promise(function(resolve,reject){
