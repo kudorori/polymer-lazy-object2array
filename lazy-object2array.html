@@ -10,10 +10,9 @@
 <dom-module id="lazy-object2array">
 	<template>
 		<template is="dom-if" if="[[dev]]">
-			<button on-click="test">test</button>
-			<button on-click="__testadd">add</button>
-			<button on-click="__testchange">change</button>
-			<button on-click="__testremove">remove</button>
+			<button on-click="test">1</button>
+			<button on-click="test2">2</button>
+			<button on-click="test3">3</button>
 			<button on-click="print">print</button>
 			<template is="dom-repeat" items="{{array}}">
 				<div>
@@ -21,8 +20,6 @@
 					<input value="{{item.value::input}}" />
 				</div>
 			</template>
-			
-			
 		</template>
 	</template>
   	<script>
@@ -35,27 +32,23 @@
 		      	console.log(this.object,this.array);
 	      	},
 	      	test:function(){
-		  		var a = ["a","b","c","d","e","f","g"];
-		  		var result = {};
-		  		a.forEach(function(i1){
-			  		a.forEach(function(i2){
-				  		result[i1+i2]=0;
-			  		})
-		  		});
-		  		this.set("object",result);
+		  		this.set("object",{
+			  		a:[
+				  		{},
+				  		{},
+				  		{}
+			  		]
+		  		})
 	      	},
-	      	__testchange:function(){
-		      	this.set("object.c",123123123);
+	      	test2:function(){
+		      	this.set("object.a.0.test",123);
 	      	},
-	      	__testadd:function(){
-		      	this.push("array",{
-			      	key:"c",
-			      	value:"123"
-		      	});
-		      	console.log(this.array,this.object);
+	      	test3:function(){
+		      	
 	      	},
-	      	__testremove:function(){
-		      	this.splice("array",0,1);
+	      	print:function(){
+		      	console.log(this.object);
+		      	console.log(this.array);
 	      	},
 	      	properties: {
 		      	dev:{
@@ -114,7 +107,7 @@
 		      	})
 	      	},
 	      	_objectChanged:function(change){
-// 		      	console.log(change,this._setting);
+		      	console.log(change,this._setting);
 		      	if(this._setting||Object.keys(change.base).length==0){
 			      	return;
 		      	}
@@ -127,7 +120,7 @@
 			      	});
 		      	}else{ 
 			      	this._rewriteElement(change.path).then(function(arrayKey){
-				      	that.set("array.#"+arrayKey,change.value);
+				      	that.set("array.#"+arrayKey+".value",change.value);
 			      	}).catch(function(objectKey){
 				      	console.log(objectKey,change.value);
 				      	that.push("array",{
@@ -152,11 +145,11 @@
 			      	console.log("rewriteElement");
 			      	var path = change.split(".");
 			      	var key = path[1];
-			      	var check = this.array.filter(function(item){
+			      	var index = this.array.findIndex(function(item){
 				      	return item.key==key;
-			      	});
-			      	if(check.length>0){
-				      	resolve(check[0].key);
+			      	})
+			      	if(index!=-1){
+				      	resolve(index);
 			      	}else{
 				      	reject(key);
 			      	}
