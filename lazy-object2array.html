@@ -76,7 +76,7 @@
 		      	"_arrayChanged(array.*)"
 	      	],
 	      	_arrayChanged:function(change){
-		      	if(this._setting){
+		      	if(this._setting||change.base.length==0){
 			      	return;
 		      	}
 		      	this._setting=true;
@@ -114,8 +114,8 @@
 		      	})
 	      	},
 	      	_objectChanged:function(change){
-		      	console.log(change,this._setting);
-		      	if(this._setting){
+// 		      	console.log(change,this._setting);
+		      	if(this._setting||Object.keys(change.base).length==0){
 			      	return;
 		      	}
 		      	this._setting=true;
