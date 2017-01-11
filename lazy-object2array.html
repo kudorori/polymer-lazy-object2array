@@ -16,6 +16,9 @@
 				[[item.key]] 
 				<input value="{{item.value::input}}" />
 			</template>
+			
+			<button on-click="__testadd">add</button>
+			<button on-click="__testchange">changge</button>
 		</template>
 	</template>
   	<script>
@@ -26,6 +29,12 @@
 			      	a:1,
 			      	b:2
 		      	});
+	      	},
+	      	__testchange:function(){
+		      	this.set("object.a",123123123);
+	      	},
+	      	__testadd:function(){
+		      	this.set("object.c","abcdd");
 	      	},
 	      	properties: {
 		      	dev:{
@@ -50,8 +59,14 @@
 		      	let path = change.path.match(/^array\.(#\d+)\.([^\.]+)(\.|$)/);
 	            if(!path) return;
 	            let id = path[1], field = path[2];
-	            if(field == "key") throw new Error("my-objarray: Must not change key!");
-	            if(field != "value") throw new Error("my-objarray: Only change inside value!");
+	            if(field == "key") {
+// 		            throw new Error("my-objarray: Must not change key!")
+					return ;
+	            };
+	            if(field != "value"){
+// 		            throw new Error("my-objarray: Only change inside value!")
+					return ;
+	            };
 	            this._setting = true;
 	            this.set(this._getPath(change, id), change.value);
 	            delete this._setting;
@@ -61,7 +76,9 @@
 	            if(change.path == "object") {
 		            this._rewriteArray();
 	            }else{
-		            this._writeElement(change);
+		            this._writeElement(change).catch(function(){
+			            this._rewriteArray();
+		            }.bind(this));
 	            }
 	      	},
 	      	_rewriteArray:function() {
@@ -71,12 +88,19 @@
 	            }
 	        },
 	        _writeElement:function(change) {
-	            const path = change.path.match(/^object\.([^\.]+)(.*)$/);
-	            const key = path[1];
-	            const objectPath = "object." + key + (path[2] || "");
-	            const id = this._getId(key);
-	            const arrayPath = "array." + id + ".value" + (path[2] || "");
-	            this.set(arrayPath, this.get(objectPath));
+		        return new Promise(function(resolve,reject){
+			        const path = change.path.match(/^object\.([^\.]+)(.*)$/);
+		            const key = path[1];
+		            const objectPath = "object." + key + (path[2] || "");
+		            const id = this._getId(key);
+		            if(id!=undefined){
+			        	const arrayPath = "array." + id + ".value" + (path[2] || "");
+			            this.set(arrayPath, this.get(objectPath));   
+		            }else{
+			            reject();
+		            }
+		        })
+	            
 	        },
 	        _getId:function(key) {
 	            const collection = Polymer.Collection.get(this.array);
