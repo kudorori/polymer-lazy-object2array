@@ -121,14 +121,14 @@
 		      	}else{ 
 			      	this._rewriteElement(change.path).then(function(arrayKey){
 				      	that.set("array.#"+arrayKey+".value",change.value);
+				      	delete that._setting;
 			      	}).catch(function(objectKey){
-				      	console.log(objectKey,change.value);
-				      	that.push("array",{
-					      	key:objectKey,
-					      	value:change.value
+				      	that._rewriteArray(change.base).then(function(result){
+					    	that.set("array",result);
+					    	delete that._setting;
 				      	});
 			      	}).then(function(){
-				      	delete that._setting;
+// 				      	delete that._setting;
 			      	})
 		      	}
 	      	},
