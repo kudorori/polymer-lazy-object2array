@@ -64,8 +64,7 @@
 		      	},
 		        array:{
 			        type:Array,
-			        notify:true,
-                    value:[]
+			        notify:true
 		        },
 		        object:{
 			        type:Object,
@@ -77,7 +76,6 @@
 		      	"_arrayChanged(array.*)"
 	      	],
 	      	_arrayChanged:function(change){
-		      	console.log(change);
 		      	if(this._setting){
 			      	return;
 		      	}
